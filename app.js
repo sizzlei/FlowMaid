@@ -192,10 +192,17 @@
   function refreshNode(n){drawShape(n);
     edges.forEach(e=>{if(e.from===n.id||e.to===n.id)drawEdge(e);});}
 
+  // point on the node's actual outline in the direction of (tx,ty), so arrows touch the shape
   function edgePoint(n,tx,ty){
     const dx=tx-n.x,dy=ty-n.y;if(!dx&&!dy)return{x:n.x,y:n.y};
-    const hw=n.w/2,hh=n.h/2;
-    const sc=1/Math.max(Math.abs(dx)/hw,Math.abs(dy)/hh);
+    const hw=n.w/2,hh=n.h/2;let sc;
+    if(n.shape==="circle"){                       // ellipse boundary
+      sc=1/Math.hypot(dx/hw,dy/hh);
+    }else if(n.shape==="diamond"){                // rhombus boundary
+      sc=1/(Math.abs(dx)/hw+Math.abs(dy)/hh);
+    }else{                                        // rectangle-like box boundary
+      sc=1/Math.max(Math.abs(dx)/hw,Math.abs(dy)/hh);
+    }
     return{x:n.x+dx*sc,y:n.y+dy*sc};
   }
   function drawEdge(e){

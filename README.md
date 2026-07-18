@@ -1,82 +1,85 @@
 # FlowCanvas
 
-**FlowCanvas** is a visual, drag-and-drop editor for building [Mermaid](https://mermaid.js.org/) flowcharts. Draw your diagram on a canvas and FlowCanvas writes the Mermaid code for you — no syntax to memorize.
+**FlowCanvas**는 [Mermaid](https://mermaid.js.org/) 플로우차트를 시각적으로(드래그 앤 드롭) 만드는 에디터입니다. 캔버스에 그림을 그리면 FlowCanvas가 Mermaid 코드를 자동으로 만들어 줍니다 — 문법을 외울 필요가 없어요.
 
-No build step, no server, no dependencies. Open `index.html` in any modern browser and it just works.
+빌드 과정도, 서버도, 외부 의존성도 없습니다. `index.html`을 최신 브라우저에서 열면 바로 동작합니다.
 
-## ✨ Features
+> Mermaid는 별개의 오픈소스 프로젝트이며, FlowCanvas와는 무관합니다. FlowCanvas는 Mermaid 문법과 **호환되는** 코드를 생성할 뿐입니다.
 
-- **Draw, don't code** — drag shapes from the top palette onto the canvas; the Mermaid code is generated automatically as you work.
-- **8 node shapes** — rounded, rectangle, stadium, diamond, circle, hexagon, cylinder (DB), and subroutine.
-- **Drag-to-connect** — hover a node and drag the glowing handle to another node to draw an arrow.
-- **Edge styles** — solid / dotted / thick lines and arrow / open / circle / cross / bidirectional ends.
-- **Subgraphs** — box-select nodes and group them into a titled `subgraph` container (double-click the title to rename).
-- **Box-select** — drag on the empty canvas to select multiple nodes, then move, delete, recolor, or group them together.
-- **Auto text wrapping** — long labels wrap onto multiple lines and the node grows to fit.
-- **Node styling** — fill color, border color, and border style (solid/dashed/thick). Nodes sharing a style are emitted as a reusable Mermaid `classDef`.
-- **Curved or straight arrows** — toggle with a click (or `Cmd/Ctrl+E`).
-- **Canvas navigation** — hold **Space + drag** to pan, scroll to zoom, `F` to fit the whole diagram.
-- **Undo / Redo** — `Cmd/Ctrl+Z` and `Cmd/Ctrl+Shift+Z`.
-- **Collapsible code panel** — hide the code sidebar for a bigger canvas.
-- **Export** — download a **PNG** image, the **`.mmd`** Mermaid source, or a **`.json`** project file.
-- **Save / Load** — your work auto-saves in the browser and restores on the next visit; export/import `.json` to move between machines.
-- **Configurable shortcuts** — remap every keyboard shortcut in Settings; preferences persist as JSON in local storage.
+## ✨ 기능
 
-## 📁 Project structure
+- **그리면 코드가 된다** — 상단 팔레트의 도형을 캔버스로 드래그해 배치하면 Mermaid 코드가 실시간으로 생성됩니다.
+- **도형 8종** — 둥근 사각형, 사각형, 스타디움, 마름모, 원, 육각형, 원통(DB), 서브루틴.
+- **드래그로 연결** — 노드에 마우스를 올리면 나오는 점을 다른 노드로 끌어 화살표를 만듭니다.
+- **화살표 스타일** — 실선/점선/굵게, 끝모양은 화살표/없음/원/X/양방향.
+- **그룹(서브그래프)** — 노드를 묶어 제목 있는 박스로 만들고, 박스째 드래그로 이동. 더블클릭으로 이름 변경.
+- **영역 선택** — 빈 곳을 드래그해 여러 노드를 한 번에 선택하고 이동·삭제·색상·그룹화.
+- **자동 줄바꿈** — 긴 라벨은 여러 줄로 감기고 노드 크기가 자동 조절됩니다.
+- **노드 스타일** — 채움 색, 테두리 색·스타일(실선/점선/굵게). 같은 스타일의 노드는 재사용 가능한 Mermaid `classDef`로 묶여 출력됩니다.
+- **곡선/직선 화살표** — 클릭 한 번으로 전환 (`Cmd/Ctrl+E`).
+- **캔버스 이동/확대** — `Space + 드래그`로 이동, 휠로 확대/축소, `F`로 화면 맞춤, 상단 배율 컨트롤 제공.
+- **실행취소/다시실행** — `Cmd/Ctrl+Z`, `Cmd/Ctrl+Shift+Z`.
+- **우클릭 메뉴** — 노드·화살표·그룹·빈 곳에서 상황에 맞는 작업(색·스타일·삭제·그룹·노드 추가 등)을 바로 실행.
+- **코드 패널 접기** — 캔버스를 넓게 쓰고 싶을 때 코드 패널을 숨길 수 있습니다.
+- **내보내기** — **PNG** 이미지, **`.mmd`** Mermaid 소스, **`.json`** 프로젝트 파일로 저장(파일명 지정 가능).
+- **저장/불러오기** — 작업 내용이 브라우저에 자동 저장되어 다시 열어도 복원되고, `.json`으로 내보내 다른 기기로 옮길 수 있습니다.
+- **단축키 설정** — 모든 단축키를 설정에서 재지정할 수 있고, 설정은 JSON으로 저장됩니다.
+
+## 📁 프로젝트 구조
 
 ```
-FlowCanvas/
-├── index.html   # markup (toolbar, canvas, code panel, settings modal)
-├── styles.css   # all styling; purple theme via CSS variables in :root
-├── app.js       # all logic (no dependencies); see the header comment for a section map
+flowcanvas/
+├── index.html   # 마크업 (툴바, 캔버스, 코드 패널, 설정 모달)
+├── styles.css   # 스타일 (다크 테마, :root의 CSS 변수로 관리)
+├── app.js       # 로직 (무의존성) — 상단 주석에 섹션 지도 있음
 ├── README.md
 └── LICENSE
 ```
 
-`app.js` opens with a comment describing its 12 sections (view/pan-zoom, state, rendering, selection, interactions, CRUD, code generation, PNG export, serialize, history, shortcuts, startup).
+`app.js` 맨 위에는 12개 섹션(뷰/팬·줌, 상태, 렌더링, 선택, 상호작용, CRUD, 코드 생성, PNG 내보내기, 직렬화, 히스토리, 단축키, 시작)을 설명하는 주석이 있습니다.
 
-## 🚀 Use it
+## 🚀 사용 방법
 
-### Option A — just open it
-Download the folder and double-click `index.html`.
+### 방법 A — 그냥 열기
+폴더를 받아 `index.html`을 더블클릭하세요.
 
-### Option B — host it on GitHub Pages (free)
-1. Create a new GitHub repository and add **all files** (`index.html`, `styles.css`, `app.js`, `README.md`, `LICENSE`).
-2. Push to the `main` branch.
-3. In the repo, go to **Settings → Pages**.
-4. Under **Build and deployment → Source**, choose **Deploy from a branch**.
-5. Select branch **`main`** and folder **`/ (root)`**, then **Save**.
-6. After a minute, your app is live at `https://<your-username>.github.io/<repo-name>/`.
+### 방법 B — GitHub Pages로 무료 배포
+1. GitHub에 새 저장소를 만들고 **모든 파일**(`index.html`, `styles.css`, `app.js`, `README.md`, `LICENSE`)을 올립니다.
+2. `main` 브랜치에 커밋/푸시합니다.
+3. 저장소 **Settings → Pages**로 이동합니다.
+4. **Build and deployment → Source**에서 **Deploy from a branch**를 선택합니다.
+5. 브랜치 **`main`**, 폴더 **`/ (root)`**를 지정하고 **Save**를 누릅니다.
+6. 1~2분 뒤 `https://<사용자명>.github.io/<저장소명>/`에서 앱이 열립니다.
 
-Because FlowCanvas is a static site (HTML + CSS + JS in the same folder), GitHub Pages serves it directly with nothing else to configure.
+정적 사이트(HTML + CSS + JS)라 별도 빌드나 설정 없이 그대로 서빙됩니다.
 
-## ⌨️ Default shortcuts
+## ⌨️ 기본 단축키
 
-| Action | Shortcut |
+| 동작 | 단축키 |
 | --- | --- |
-| Delete selection | `Delete` / `Backspace` |
-| Undo | `Cmd/Ctrl + Z` |
-| Redo | `Cmd/Ctrl + Shift + Z` |
-| Toggle curved arrows | `Cmd/Ctrl + E` |
-| Fit to screen | `F` |
-| Save to file | `Cmd/Ctrl + S` |
-| Open file | `Cmd/Ctrl + O` |
-| Deselect | `Esc` |
-| Pan canvas | Hold `Space` + drag |
-| Box-select | Drag on empty canvas |
+| 선택 삭제 | `Delete` / `Backspace` |
+| 실행취소 | `Cmd/Ctrl + Z` |
+| 다시실행 | `Cmd/Ctrl + Shift + Z` |
+| 곡선/직선 전환 | `Cmd/Ctrl + E` |
+| 화면 맞춤 | `F` |
+| 파일 저장 | `Cmd/Ctrl + S` |
+| 파일 열기 | `Cmd/Ctrl + O` |
+| 선택 해제 | `Esc` |
+| 화면 이동 | `Space` + 드래그 |
+| 영역 선택 | 빈 캔버스에서 드래그 |
 
-All key bindings (except pan/box-select) can be reassigned from the ⚙ Settings dialog.
+이동/영역선택을 제외한 모든 단축키는 ⚙ 설정에서 바꿀 수 있습니다.
 
-## 🗺️ How data is stored
+## 🗺️ 데이터 저장 방식
 
-- **Auto-save:** the current diagram is written to `localStorage` (`flowcanvas.diagram`) on every change and restored automatically.
-- **Settings:** shortcut bindings are stored as JSON in `localStorage` (`flowcanvas.settings`).
-- **Portable files:** use **💾 Save** to download a `.json` you can commit, share, or re-open with **📂 Open**.
+- **자동 저장**: 변경할 때마다 현재 다이어그램이 `localStorage`(`flowcanvas.diagram`)에 저장되어 자동 복원됩니다.
+- **설정**: 단축키 설정은 `localStorage`(`flowcanvas.settings`)에 JSON으로 저장됩니다.
+- **파일**: **💾 저장**으로 받은 `.json`은 커밋·공유하거나 **📂 열기**로 다시 불러올 수 있습니다.
 
-## 🛠️ Tech
+## 🛠️ 기술
 
-Vanilla HTML, CSS, and JavaScript with an SVG canvas. No frameworks, no external network calls — safe to run fully offline.
+SVG 캔버스를 사용하는 순수 HTML/CSS/JavaScript. 프레임워크 없음, 외부 네트워크 호출 없음 — 완전히 오프라인에서 동작합니다.
 
-## 📄 License
+## 📄 라이선스
 
-Released under the [MIT License](./LICENSE). Contributions welcome — open an issue or a pull request.
+[MIT License](./LICENSE)로 배포됩니다. 기여를 환영합니다 — 이슈나 풀 리퀘스트를 남겨 주세요.

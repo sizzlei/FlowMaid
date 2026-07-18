@@ -980,10 +980,12 @@
     curve:["Mod+E"],fit:["F"],save:["Mod+S"],open:["Mod+O"],deselect:["Escape"]};
   let keys=JSON.parse(JSON.stringify(DEFAULT_KEYS));
   let capturing=null;
+  let codeHidden=false;                 // code-panel minimized state (persisted)
   function isMac(){return /Mac|iPhone|iPad/.test((navigator.platform||"")+(navigator.userAgent||""));}
   function loadSettings(){try{const j=JSON.parse(localStorage.getItem(LS_SETTINGS));
-    if(j&&j.shortcuts){for(const a in DEFAULT_KEYS)keys[a]=j.shortcuts[a]||DEFAULT_KEYS[a];}}catch(e){}}
-  function saveSettings(){try{localStorage.setItem(LS_SETTINGS,JSON.stringify({shortcuts:keys}));}catch(e){}}
+    if(j&&j.shortcuts){for(const a in DEFAULT_KEYS)keys[a]=j.shortcuts[a]||DEFAULT_KEYS[a];}
+    if(j&&typeof j.codeHidden==="boolean")codeHidden=j.codeHidden;}catch(e){}}
+  function saveSettings(){try{localStorage.setItem(LS_SETTINGS,JSON.stringify({shortcuts:keys,codeHidden}));}catch(e){}}
   function comboFromEvent(ev){
     const parts=[];
     if(ev.metaKey||ev.ctrlKey)parts.push("Mod");
@@ -1025,8 +1027,10 @@
   document.getElementById("settingsModal").addEventListener("click",e=>{
     if(e.target.id==="settingsModal")closeSettings();});
   const appEl=document.getElementById("app");
-  document.getElementById("hideCode").addEventListener("click",()=>appEl.classList.add("code-hidden"));
-  document.getElementById("showCode").addEventListener("click",()=>appEl.classList.remove("code-hidden"));
+  document.getElementById("hideCode").addEventListener("click",()=>{
+    appEl.classList.add("code-hidden");codeHidden=true;saveSettings();});
+  document.getElementById("showCode").addEventListener("click",()=>{
+    appEl.classList.remove("code-hidden");codeHidden=false;saveSettings();});
   // hidden color pickers (triggered from the right-click menu)
   document.getElementById("colorPick").addEventListener("input",e=>applyColor(e.target.value));
   document.getElementById("strokePick").addEventListener("input",e=>applyStroke(e.target.value));
@@ -1123,6 +1127,7 @@
 
   // ---------- startup: load settings + saved diagram (survives restart) ----------
   loadSettings();
+  if(codeHidden)appEl.classList.add("code-hidden");   // restore minimized code panel
   (function start(){
     let saved=null;try{saved=JSON.parse(localStorage.getItem(LS_DIAGRAM));}catch(e){}
     restoring=true;

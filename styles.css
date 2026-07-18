@@ -103,6 +103,8 @@
     background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
   #app.code-hidden #side{display:none}
   #app.code-hidden #showCode{display:block}
+  .code-opt{display:flex;align-items:center;gap:8px;padding:2px 14px 10px}
+  .code-opt select{font-size:12.5px}
   #code{flex:1;margin:0 14px 12px;background:#120f1c;border:1px solid var(--line);border-radius:8px;
     padding:12px;font-family:"SF Mono",Menlo,Consolas,monospace;font-size:12.5px;color:#d8cff0;
     white-space:pre;overflow:auto;min-height:120px}

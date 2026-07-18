@@ -41,13 +41,6 @@
         <button id="redoBtn" title="다시실행">↷</button>
         <button id="delBtn" class="danger" title="삭제">🗑</button>
         <button id="curveBtn" title="곡선/직선 화살표">⤳ 곡선</button>
-        <span class="mini">방향</span>
-        <select id="dir">
-          <option value="TD">↓ TD</option>
-          <option value="LR">→ LR</option>
-          <option value="BT">↑ BT</option>
-          <option value="RL">← RL</option>
-        </select>
       </div>
     </section>
 
@@ -102,6 +95,15 @@
     <aside id="side">
       <h2><span>FlowCanvas 코드 (자동 생성)</span>
         <button id="hideCode" title="코드 패널 숨기기">›</button></h2>
+      <div class="code-opt">
+        <label class="mini" for="dir">코드 방향</label>
+        <select id="dir" title="내보낸 Mermaid 코드의 배치 방향입니다. 캔버스 화면에는 영향을 주지 않고, 다른 도구에서 렌더링할 때 흐름 방향을 정합니다.">
+          <option value="TD">↓ 위→아래 (TD)</option>
+          <option value="LR">→ 좌→우 (LR)</option>
+          <option value="BT">↑ 아래→위 (BT)</option>
+          <option value="RL">← 우→좌 (RL)</option>
+        </select>
+      </div>
       <pre id="code"></pre>
       <div class="sidebtns">
         <button id="copyBtn">📋 코드 복사</button>

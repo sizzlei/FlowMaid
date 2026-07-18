@@ -1,6 +1,6 @@
-# FlowMaid
+# FlowCanvas
 
-**FlowMaid** is a visual, drag-and-drop editor for building [Mermaid](https://mermaid.js.org/) flowcharts. Draw your diagram on a canvas and FlowMaid writes the Mermaid code for you — no syntax to memorize.
+**FlowCanvas** is a visual, drag-and-drop editor for building [Mermaid](https://mermaid.js.org/) flowcharts. Draw your diagram on a canvas and FlowCanvas writes the Mermaid code for you — no syntax to memorize.
 
 No build step, no server, no dependencies. Open `index.html` in any modern browser and it just works.
 
@@ -25,7 +25,7 @@ No build step, no server, no dependencies. Open `index.html` in any modern brows
 ## 📁 Project structure
 
 ```
-FlowMaid/
+FlowCanvas/
 ├── index.html   # markup (toolbar, canvas, code panel, settings modal)
 ├── styles.css   # all styling; purple theme via CSS variables in :root
 ├── app.js       # all logic (no dependencies); see the header comment for a section map
@@ -48,7 +48,7 @@ Download the folder and double-click `index.html`.
 5. Select branch **`main`** and folder **`/ (root)`**, then **Save**.
 6. After a minute, your app is live at `https://<your-username>.github.io/<repo-name>/`.
 
-Because FlowMaid is a static site (HTML + CSS + JS in the same folder), GitHub Pages serves it directly with nothing else to configure.
+Because FlowCanvas is a static site (HTML + CSS + JS in the same folder), GitHub Pages serves it directly with nothing else to configure.
 
 ## ⌨️ Default shortcuts
 
@@ -69,8 +69,8 @@ All key bindings (except pan/box-select) can be reassigned from the ⚙ Settings
 
 ## 🗺️ How data is stored
 
-- **Auto-save:** the current diagram is written to `localStorage` (`flowmaid.diagram`) on every change and restored automatically.
-- **Settings:** shortcut bindings are stored as JSON in `localStorage` (`flowmaid.settings`).
+- **Auto-save:** the current diagram is written to `localStorage` (`flowcanvas.diagram`) on every change and restored automatically.
+- **Settings:** shortcut bindings are stored as JSON in `localStorage` (`flowcanvas.settings`).
 - **Portable files:** use **💾 Save** to download a `.json` you can commit, share, or re-open with **📂 Open**.
 
 ## 🛠️ Tech

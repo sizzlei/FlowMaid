@@ -1,5 +1,5 @@
 /*
- * FlowMaid — 애플리케이션 로직 (의존성 없는 순수 JS)
+ * FlowCanvas — 애플리케이션 로직 (의존성 없는 순수 JS)
  *
  * 전체 구조 (아래 순서대로 정의됨):
  *   1. view          : viewBox 기반 팬/줌, 화면 맞춤(fitView)
@@ -15,7 +15,7 @@
  *  11. shortcuts     : 설정 가능한 단축키(설정은 JSON으로 영속화)
  *  12. startup       : 저장본 복원 또는 예시 시드
  *
- * 저장 키: flowmaid.diagram(작업본), flowmaid.settings(단축키)
+ * 저장 키: flowcanvas.diagram(작업본), flowcanvas.settings(단축키)
  */
 (function(){
   "use strict";
@@ -697,7 +697,7 @@
   // ---------- PNG export ----------
   function exportPNG(){
     if(!nodes.length){toast("먼저 노드를 추가하세요");return;}
-    askFilename("flowmaid-diagram","png",fn=>doExportPNG(fn));
+    askFilename("flowcanvas-diagram","png",fn=>doExportPNG(fn));
   }
   function doExportPNG(fn){
     const b=contentBounds();let{minX,minY,maxX,maxY}=b;
@@ -900,7 +900,7 @@
   }
 
   // ---------- history (undo / redo) + autosave ----------
-  const LS_DIAGRAM="flowmaid.diagram";
+  const LS_DIAGRAM="flowcanvas.diagram";
   let undoStack=[],redoStack=[],lastCommitted=null,restoring=false;
   function snapshot(){return JSON.stringify(serialize());}
   function autosave(){try{localStorage.setItem(LS_DIAGRAM,lastCommitted||snapshot());}catch(e){}}
@@ -960,7 +960,7 @@
     a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   }
   function saveFile(){
-    askFilename("flowmaid-diagram","json",fn=>{
+    askFilename("flowcanvas-diagram","json",fn=>{
       download(new Blob([JSON.stringify(serialize(),null,2)],{type:"application/json"}),fn);
       toast("저장 완료: "+fn);});}
   function openFile(){document.getElementById("fileInput").click();}
@@ -971,7 +971,7 @@
     rd.readAsText(file);}
 
   // ---------- shortcuts / settings ----------
-  const LS_SETTINGS="flowmaid.settings";
+  const LS_SETTINGS="flowcanvas.settings";
   const ACTIONS=[
     {id:"delete",label:"삭제"},{id:"undo",label:"실행취소"},{id:"redo",label:"다시실행"},
     {id:"curve",label:"곡선/직선 전환"},{id:"fit",label:"화면 맞춤"},
@@ -1046,7 +1046,7 @@
   document.getElementById("copyBtn").addEventListener("click",()=>{
     navigator.clipboard.writeText(genCode()).then(()=>toast("코드 복사됨"),()=>toast("복사 실패"));});
   document.getElementById("mmdBtn").addEventListener("click",()=>{
-    askFilename("flowmaid","mmd",fn=>{
+    askFilename("flowcanvas","mmd",fn=>{
       download(new Blob([genCode()],{type:"text/plain"}),fn);toast(".mmd 저장 완료: "+fn);});});
 
   // ---------- marquee: drag on empty canvas to box-select nodes ----------

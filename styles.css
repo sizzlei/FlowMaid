@@ -107,6 +107,8 @@
   .toast.show{opacity:1}
   button.on{background:var(--accent2);border-color:var(--accent2);color:#2a0a3d;font-weight:700}
   #undoBtn,#redoBtn,#settingsBtn{font-size:15px;padding:6px 11px;line-height:1}
+  #zoomCtl button{padding:6px 10px}
+  #zoomLevel{min-width:54px;text-align:center;font-variant-numeric:tabular-nums}
   /* settings modal */
   #settingsModal{position:fixed;inset:0;background:rgba(6,8,12,.6);backdrop-filter:blur(2px);
     display:none;align-items:center;justify-content:center;z-index:100}

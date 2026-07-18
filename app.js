@@ -30,7 +30,20 @@
 
   // ---------- view (pan / zoom via viewBox) ----------
   const view={x:0,y:0,w:1000,h:700};
-  function applyView(){svg.setAttribute("viewBox",`${view.x} ${view.y} ${view.w} ${view.h}`);}
+  function applyView(){svg.setAttribute("viewBox",`${view.x} ${view.y} ${view.w} ${view.h}`);updateZoomLabel();}
+  function updateZoomLabel(){const r=svg.getBoundingClientRect();
+    const z=r.width?Math.round(r.width/view.w*100):100;
+    const el=document.getElementById("zoomLevel");if(el)el.textContent=z+"%";}
+  function zoomBy(factor){                     // zoom around the viewport center
+    const cx=view.x+view.w/2,cy=view.y+view.h/2;
+    const nw=Math.min(6000,Math.max(120,view.w*factor)),sc=nw/view.w;
+    view.w=nw;view.h*=sc;view.x=cx-view.w/2;view.y=cy-view.h/2;applyView();
+  }
+  function resetZoom(){                        // back to 100% (1px : 1unit), keep center
+    const r=svg.getBoundingClientRect();
+    const cx=view.x+view.w/2,cy=view.y+view.h/2;
+    view.w=r.width||1000;view.h=r.height||700;view.x=cx-view.w/2;view.y=cy-view.h/2;applyView();
+  }
   function initView(){const r=svg.getBoundingClientRect();
     view.w=r.width||1000;view.h=r.height||700;view.x=0;view.y=0;applyView();}
   function fitView(){
@@ -192,7 +205,7 @@
   function refreshNode(n){drawShape(n);
     edges.forEach(e=>{if(e.from===n.id||e.to===n.id)drawEdge(e);});}
 
-  // point on the node's actual outline in the direction of (tx,ty), so arrows touch the shape
+  // point on the node's actual outline in the direction of (tx,ty) — used for the temp connect line
   function edgePoint(n,tx,ty){
     const dx=tx-n.x,dy=ty-n.y;if(!dx&&!dy)return{x:n.x,y:n.y};
     const hw=n.w/2,hh=n.h/2;let sc;
@@ -205,9 +218,18 @@
     }
     return{x:n.x+dx*sc,y:n.y+dy*sc};
   }
+  // the 4 connection anchors (where the handle dots sit): top/right/bottom/left.
+  // edges attach to the anchor nearest the other end, so arrows land on the visible dot.
+  function anchorPoint(n,tx,ty){
+    const hw=n.w/2,hh=n.h/2;
+    const cand=[[n.x,n.y-hh],[n.x+hw,n.y],[n.x,n.y+hh],[n.x-hw,n.y]];
+    let best=cand[0],bd=Infinity;
+    for(const c of cand){const d=(c[0]-tx)*(c[0]-tx)+(c[1]-ty)*(c[1]-ty);if(d<bd){bd=d;best=c;}}
+    return {x:best[0],y:best[1]};
+  }
   function drawEdge(e){
     const a=nodes.find(n=>n.id===e.from),b=nodes.find(n=>n.id===e.to);if(!a||!b)return;
-    const p1=edgePoint(a,b.x,b.y),p2=edgePoint(b,a.x,a.y);
+    const p1=anchorPoint(a,b.x,b.y),p2=anchorPoint(b,a.x,a.y);
     let mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2,d;
     if(edgeCurve){
       const dx=p2.x-p1.x,dy=p2.y-p1.y,len=Math.hypot(dx,dy)||1;
@@ -514,6 +536,7 @@
   // ---------- PNG export ----------
   function exportPNG(){
     if(!nodes.length){toast("먼저 노드를 추가하세요");return;}
+    const fn=askFilename("flowmaid-diagram","png");if(!fn)return;
     let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
     nodes.forEach(n=>{minX=Math.min(minX,n.x-n.w/2);maxX=Math.max(maxX,n.x+n.w/2);
       minY=Math.min(minY,n.y-n.h/2);maxY=Math.max(maxY,n.y+n.h/2);});
@@ -535,9 +558,7 @@
     img.onload=function(){
       const canvas=document.createElement("canvas");canvas.width=w*scale;canvas.height=h*scale;
       const ctx=canvas.getContext("2d");ctx.setTransform(scale,0,0,scale,0,0);ctx.drawImage(img,0,0);
-      canvas.toBlob(function(b){const a=document.createElement("a");a.href=URL.createObjectURL(b);
-        a.download="flowmaid-diagram.png";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-        toast("PNG 저장 완료");},"image/png");
+      canvas.toBlob(function(b){download(b,fn);toast("PNG 저장 완료: "+fn);},"image/png");
     };
     img.onerror=function(){toast("내보내기 실패");};
     img.src="data:image/svg+xml;base64,"+btoa(unescape(encodeURIComponent(svgStr)));
@@ -721,10 +742,22 @@
     toast(edgeCurve?"곡선 화살표":"직선 화살표");}
 
   // ---------- save / load files ----------
-  function saveFile(){
-    const blob=new Blob([JSON.stringify(serialize(),null,2)],{type:"application/json"});
+  // ask for a file name; extension is fixed (appended, not user-editable)
+  function askFilename(defName,ext){
+    let name=prompt("파일 이름을 입력하세요 (확장자 ."+ext+" 는 자동으로 붙습니다):",defName);
+    if(name===null)return null;                                  // cancelled
+    name=name.trim().replace(/[\\/:*?"<>|]/g,"_")                // strip illegal chars
+      .replace(new RegExp("\\."+ext+"$","i"),"");                // drop a typed-in extension
+    return (name||defName)+"."+ext;
+  }
+  function download(blob,filename){
     const a=document.createElement("a");a.href=URL.createObjectURL(blob);
-    a.download="flowmaid-diagram.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast("저장 완료");}
+    a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }
+  function saveFile(){
+    const fn=askFilename("flowmaid-diagram","json");if(!fn)return;
+    download(new Blob([JSON.stringify(serialize(),null,2)],{type:"application/json"}),fn);
+    toast("저장 완료: "+fn);}
   function openFile(){document.getElementById("fileInput").click();}
   function handleFile(file){
     const rd=new FileReader();
@@ -803,6 +836,9 @@
   document.getElementById("delBtn").addEventListener("click",deleteSelected);
   document.getElementById("dir").addEventListener("change",genCode);
   document.getElementById("fitBtn").addEventListener("click",fitView);
+  document.getElementById("zoomIn").addEventListener("click",()=>zoomBy(0.8));
+  document.getElementById("zoomOut").addEventListener("click",()=>zoomBy(1.25));
+  document.getElementById("zoomLevel").addEventListener("click",resetZoom);
   document.getElementById("pngBtn").addEventListener("click",exportPNG);
   document.getElementById("clearBtn").addEventListener("click",()=>{
     if(!nodes.length)return;
@@ -811,9 +847,8 @@
   document.getElementById("copyBtn").addEventListener("click",()=>{
     navigator.clipboard.writeText(genCode()).then(()=>toast("코드 복사됨"),()=>toast("복사 실패"));});
   document.getElementById("mmdBtn").addEventListener("click",()=>{
-    const blob=new Blob([genCode()],{type:"text/plain"});const a=document.createElement("a");
-    a.href=URL.createObjectURL(blob);a.download="diagram.mmd";a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast(".mmd 저장 완료");});
+    const fn=askFilename("flowmaid","mmd");if(!fn)return;
+    download(new Blob([genCode()],{type:"text/plain"}),fn);toast(".mmd 저장 완료: "+fn);});
 
   // ---------- marquee: drag on empty canvas to box-select nodes ----------
   let marquee=null,marqueeEl=null;

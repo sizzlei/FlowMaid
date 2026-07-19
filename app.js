@@ -802,6 +802,38 @@
     applyView();
   },{passive:false});
 
+  // ---------- touch support (tablets) ----------
+  // One finger → forwarded to mouse events (node/handle/marquee/group drag).
+  // Two fingers → pan the canvas. Prevents the page from scrolling during a drag.
+  (function touchBridge(){
+    let panT=null;
+    const avg=t=>({x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2});
+    const fwd=(type,touch,target)=>{
+      const el=target||document.elementFromPoint(touch.clientX,touch.clientY)||canvasWrap;
+      el.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,
+        clientX:touch.clientX,clientY:touch.clientY,button:0}));
+    };
+    canvasWrap.addEventListener("touchstart",e=>{
+      if(e.touches.length===2){e.preventDefault();const a=avg(e.touches);
+        panT={x:a.x,y:a.y,vx:view.x,vy:view.y};return;}
+      if(e.touches.length!==1)return;
+      e.preventDefault();                       // stop scroll + suppress emulated mouse events
+      fwd("mousedown",e.touches[0],e.target);
+    },{passive:false});
+    canvasWrap.addEventListener("touchmove",e=>{
+      if(panT&&e.touches.length===2){e.preventDefault();
+        const a=avg(e.touches),r=svg.getBoundingClientRect();
+        view.x=panT.vx-(a.x-panT.x)*(view.w/r.width);
+        view.y=panT.vy-(a.y-panT.y)*(view.h/r.height);applyView();return;}
+      if(e.touches.length!==1)return;
+      e.preventDefault();fwd("mousemove",e.touches[0],window);
+    },{passive:false});
+    canvasWrap.addEventListener("touchend",e=>{
+      if(panT&&e.touches.length<2)panT=null;
+      if(e.changedTouches.length){fwd("mouseup",e.changedTouches[0],window);}
+    },{passive:false});
+  })();
+
   // ---------- palette drag → drop to place node ----------
   let paletteDrag=null;
   document.querySelectorAll(".shape-btn").forEach(btn=>{

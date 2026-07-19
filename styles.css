@@ -11,8 +11,9 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    overflow:hidden;overscroll-behavior:none;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
-  #app{display:flex;flex-direction:column;height:100vh}
+  #app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
   /* ---------- top toolbar (labeled groups) ---------- */
   header{display:flex;align-items:stretch;gap:0;padding:7px 10px;
     background:linear-gradient(180deg,#121019,#0a0810);
@@ -53,6 +54,8 @@
     radial-gradient(circle at 1px 1px, #201a2e 1px, transparent 0) 0 0/22px 22px, var(--bg)}
   #canvasWrap.pan-ready{cursor:grab}
   #canvasWrap.panning{cursor:grabbing}
+  /* stop the browser from scrolling/zooming the page when dragging on the canvas (touch devices) */
+  #canvasWrap,#svg{touch-action:none}
   svg{width:100%;height:100%;display:block}
   /* drag ghost while placing a shape */
   .drag-ghost{position:fixed;pointer-events:none;z-index:60;opacity:.85;

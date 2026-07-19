@@ -162,17 +162,18 @@
   window.addEventListener("mousedown",e=>{if(ctx.style.display==="block"&&!ctx.contains(e.target))closeCtx();});
   window.addEventListener("keydown",e=>{if(e.key==="Escape"&&ctx.style.display==="block")closeCtx();});
   window.addEventListener("scroll",closeCtx,true);
-  canvasWrap.addEventListener("contextmenu",ev=>{
-    ev.preventDefault();closeCtx();
-    const node=nodeUnder(ev);
-    const edgeEl=ev.target.closest&&ev.target.closest(".edge");
-    const groupEl=ev.target.closest&&ev.target.closest(".subgraph");
+  // build + open the context menu at (cx,cy) for the given target element
+  function showContextMenu(cx,cy,targetEl){
+    closeCtx();
+    const node=nodeUnder({clientX:cx,clientY:cy});
+    const edgeEl=targetEl&&targetEl.closest&&targetEl.closest(".edge");
+    const groupEl=targetEl&&targetEl.closest&&targetEl.closest(".subgraph");
     let items;
     if(node){
       if(!selNodes.has(node.id))selectNode(node);
       items=[
         {label:"이름 변경",action:()=>{if(selNodes.size===1){const n=nodes.find(x=>selNodes.has(x.id));
-          openInline(ev.clientX,ev.clientY,n.label,v=>{n.label=v.trim()||n.label;refreshNode(n);genCode();});}
+          openInline(cx,cy,n.label,v=>{n.label=v.trim()||n.label;refreshNode(n);genCode();});}
           else toast("단일 노드를 선택하세요");}},
         {label:"채움 색",swatches:FILL_SWATCHES,onPick:applyColor},
         {label:"채움 색 직접…",action:()=>document.getElementById("colorPick").click()},
@@ -187,7 +188,7 @@
     }else if(edgeEl){
       const e=edges.find(x=>x.id===+edgeEl.dataset.id);if(e)selectEdge(e);
       items=[
-        {label:"라벨 편집",action:()=>{if(e)openInline(ev.clientX,ev.clientY,e.label,
+        {label:"라벨 편집",action:()=>{if(e)openInline(cx,cy,e.label,
           v=>{e.label=v.trim();drawEdge(e);genCode();});}},
         {label:"선 스타일",sub:[
           {label:"─ 실선",action:()=>applyEdgeStyle("line","solid")},
@@ -206,13 +207,13 @@
       if(sg){clearSel();[...sg.nodes].forEach(id=>{const n=nodes.find(y=>y.id===id);
         if(n){selNodes.add(id);n.el.classList.add("sel");}});}
       items=[
-        {label:"이름 변경",action:()=>sg&&renameGroupSg(sg,ev.clientX,ev.clientY)},
+        {label:"이름 변경",action:()=>sg&&renameGroupSg(sg,cx,cy)},
         {label:"그룹 색",swatches:["#8b5cf6"].concat(FILL_SWATCHES),onPick:applyGroupColor},
         {label:"그룹 색 직접…",action:()=>document.getElementById("groupColorPick").click()},
         {sep:true},
         {label:"그룹 해제",action:ungroup}];
     }else{
-      const p=cursorPt(ev);
+      const p=cursorPt({clientX:cx,clientY:cy});
       const shapes=[["둥근 사각형","round"],["사각형","rect"],["스타디움","stadium"],["마름모","diamond"],
         ["원","circle"],["육각형","hexagon"],["원통(DB)","cylinder"],["서브루틴","subroutine"]];
       items=[
@@ -220,8 +221,9 @@
         {label:"화면 맞춤",action:fitView},
         {label:"배경색 직접…",action:()=>document.getElementById("bgPick").click()}];
     }
-    openCtx(ev.clientX,ev.clientY,items);
-  });
+    openCtx(cx,cy,items);
+  }
+  canvasWrap.addEventListener("contextmenu",ev=>{ev.preventDefault();showContextMenu(ev.clientX,ev.clientY,ev.target);});
 
   // ---------- shape geometry ----------
   function makeShapeEl(shape){
@@ -806,19 +808,26 @@
   // One finger → forwarded to mouse events (node/handle/marquee/group drag).
   // Two fingers → pan the canvas. Prevents the page from scrolling during a drag.
   (function touchBridge(){
-    let panT=null;
+    let panT=null,lpTimer=null,lpStart=null;
     const avg=t=>({x:(t[0].clientX+t[1].clientX)/2,y:(t[0].clientY+t[1].clientY)/2});
     const fwd=(type,touch,target)=>{
       const el=target||document.elementFromPoint(touch.clientX,touch.clientY)||canvasWrap;
       el.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,
         clientX:touch.clientX,clientY:touch.clientY,button:0}));
     };
+    const cancelLP=()=>{if(lpTimer){clearTimeout(lpTimer);lpTimer=null;}};
     canvasWrap.addEventListener("touchstart",e=>{
+      cancelLP();
       if(e.touches.length===2){e.preventDefault();const a=avg(e.touches);
         panT={x:a.x,y:a.y,vx:view.x,vy:view.y};return;}
       if(e.touches.length!==1)return;
       e.preventDefault();                       // stop scroll + suppress emulated mouse events
-      fwd("mousedown",e.touches[0],e.target);
+      const t=e.touches[0],target=e.target;
+      fwd("mousedown",t,target);
+      // long-press → context menu (pen/touch replacement for right-click)
+      lpStart={x:t.clientX,y:t.clientY};
+      lpTimer=setTimeout(()=>{lpTimer=null;fwd("mouseup",t,window);   // end any armed drag first
+        showContextMenu(t.clientX,t.clientY,target);},520);
     },{passive:false});
     canvasWrap.addEventListener("touchmove",e=>{
       if(panT&&e.touches.length===2){e.preventDefault();
@@ -826,11 +835,16 @@
         view.x=panT.vx-(a.x-panT.x)*(view.w/r.width);
         view.y=panT.vy-(a.y-panT.y)*(view.h/r.height);applyView();return;}
       if(e.touches.length!==1)return;
-      e.preventDefault();fwd("mousemove",e.touches[0],window);
+      const t=e.touches[0];
+      if(lpStart&&Math.abs(t.clientX-lpStart.x)+Math.abs(t.clientY-lpStart.y)>8)cancelLP(); // it's a drag
+      e.preventDefault();fwd("mousemove",t,window);
     },{passive:false});
     canvasWrap.addEventListener("touchend",e=>{
+      const wasLP=!lpTimer&&lpStart&&ctx.style.display==="block";
+      cancelLP();
       if(panT&&e.touches.length<2)panT=null;
-      if(e.changedTouches.length){fwd("mouseup",e.changedTouches[0],window);}
+      if(!wasLP&&e.changedTouches.length){fwd("mouseup",e.changedTouches[0],window);}
+      lpStart=null;
     },{passive:false});
   })();
 

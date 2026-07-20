@@ -907,7 +907,9 @@
   canvasWrap.addEventListener("wheel",ev=>{
     ev.preventDefault();
     const p=cursorPt(ev);
-    const factor=ev.deltaY>0?1.1:0.9;
+    // gentle, proportional zoom (less sensitive on trackpads); clamp per-event step
+    const dy=Math.max(-60,Math.min(60,ev.deltaY));
+    const factor=Math.min(1.12,Math.max(0.89,Math.pow(1.0011,dy)));
     const nw=Math.min(6000,Math.max(200,view.w*factor));
     const scale=nw/view.w;
     const r=svg.getBoundingClientRect();
@@ -1377,7 +1379,9 @@
         html+="<pre><code>"+esc(code)+"</code></pre>";continue;}
       if(/^\s*$/.test(ln)){closeLists();i++;continue;}
       if(m=ln.match(/^(#{1,4})\s+(.*)$/)){closeLists();const lv=m[1].length;
-        html+="<h"+lv+">"+inline(m[2])+"</h"+lv+">";i++;continue;}
+        const id=m[2].replace(/[*`]/g,"").replace(/\[([^\]]+)\]\([^)]+\)/g,"$1")
+          .trim().toLowerCase().replace(/[^\w가-힣 -]/g,"").replace(/\s+/g,"-");
+        html+="<h"+lv+' id="'+id+'">'+inline(m[2])+"</h"+lv+">";i++;continue;}
       if(/^---+$/.test(ln.trim())){closeLists();html+="<hr>";i++;continue;}
       if(/^\s*>\s?/.test(ln)){closeLists();html+="<blockquote>"+inline(ln.replace(/^\s*>\s?/,""))+"</blockquote>";i++;continue;}
       if(m=ln.match(/^\s*[-*]\s+(.*)$/)){if(!ul){closeLists();html+="<ul>";ul=true;}html+="<li>"+inline(m[1])+"</li>";i++;continue;}

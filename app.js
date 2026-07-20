@@ -1103,6 +1103,8 @@
   function luminance(hex){const n=parseInt(hex.slice(1),16);
     return (0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255;}
   const BG_DARK="#0d0b13", BG_LIGHT="#ffffff";
+  const MOON_SVG='<svg viewBox="0 0 24 24" width="13" height="13"><path d="M15 2.5a9 9 0 1 0 6.9 12.3A7 7 0 0 1 15 2.5z" fill="#111"/></svg>';
+  const SUN_SVG='<svg viewBox="0 0 24 24" width="14" height="14" stroke="#111" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4" fill="#111" stroke="none"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="6.6" y2="6.6"/><line x1="17.4" y1="17.4" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="6.6" y2="17.4"/><line x1="17.4" y1="6.6" x2="19.1" y2="4.9"/></svg>';
   function applyBg(hex){
     bgColor=hex;
     const dark=luminance(hex)<0.5;
@@ -1110,7 +1112,7 @@
     canvasWrap.style.background=
       "radial-gradient(circle at 1px 1px, "+dot+" 1px, transparent 0) 0 0/22px 22px, "+hex;
     const b=document.getElementById("bgBtn");
-    if(b){b.classList.toggle("light",!dark);const k=b.querySelector(".tt-knob");if(k)k.textContent=dark?"🌙":"☀️";}
+    if(b){b.classList.toggle("light",!dark);const k=b.querySelector(".tt-knob");if(k)k.innerHTML=dark?MOON_SVG:SUN_SVG;}
     // image-node labels sit on the canvas, so re-tint them for the new background
     if(typeof nodes!=="undefined")nodes.forEach(n=>{if(n.shape==="image"&&n.textEl)drawShape(n);});
   }

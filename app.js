@@ -370,6 +370,11 @@
   }
   const XLINK="http://www.w3.org/1999/xlink";
   const IMG_SIZE=72;
+  // pick a readable label color for a given background/fill (dark text on light, light text on dark)
+  function contrastText(hex){
+    if(!hex||hex[0]!=="#")return "#f2ecff";
+    return luminance(hex)>0.6 ? "#1b1526" : "#f2ecff";
+  }
   function drawShape(n){
     if(n.shape==="image"){                       // image node: invisible rect (select/drag) + <image> + label below
       const w=IMG_SIZE,h=IMG_SIZE;n.w=w;n.h=h;const s=n.shapeEl,hw=w/2,hh=h/2;
@@ -381,6 +386,7 @@
         n.imgEl.setAttribute("preserveAspectRatio","xMidYMid meet");
         n.imgEl.setAttributeNS(XLINK,"href",n.img||"");n.imgEl.setAttribute("href",n.img||"");}
       const t=n.textEl;while(t.firstChild)t.removeChild(t.firstChild);
+      t.setAttribute("fill",contrastText(bgColor));       // label sits on the canvas → follow bg
       if(n.label){const ts=document.createElementNS(SVGNS,"tspan");
         ts.setAttribute("x",0);ts.setAttribute("y",hh+15);ts.textContent=n.label;t.appendChild(ts);}
       const pos=[[0,-hh],[hw,0],[0,hh],[-hw,0]];
@@ -408,6 +414,7 @@
       s.setAttribute("rx",rad);s.setAttribute("ry",rad);
     }
     s.setAttribute("fill",n.fill||DEFAULT_FILL);
+    n.textEl.setAttribute("fill",contrastText(n.fill||DEFAULT_FILL));   // label sits on the shape → follow fill
     applyStrokeAttrs(s,n);
     // decorative sub-elements
     if(n.decor&&n.decor.length){
@@ -832,7 +839,8 @@
       if(!el.getAttribute("fill"))el.setAttribute("fill",DEFAULT_FILL);
       if(!el.getAttribute("stroke"))el.setAttribute("stroke",DEFAULT_STROKE);});
     root.querySelectorAll(".node text").forEach(el=>{
-      el.setAttribute("fill","#f2ecff");el.setAttribute("font-size","14");
+      if(!el.getAttribute("fill"))el.setAttribute("fill","#f2ecff"); // keep per-node contrast color
+      el.setAttribute("font-size","14");
       el.setAttribute("text-anchor","middle");el.setAttribute("dominant-baseline","middle");
       el.setAttribute("font-family","sans-serif");});
     root.querySelectorAll(".handle").forEach(el=>el.remove());
@@ -1099,6 +1107,8 @@
       "radial-gradient(circle at 1px 1px, "+dot+" 1px, transparent 0) 0 0/22px 22px, "+hex;
     const el=document.getElementById("bgPick");
     if(el&&el.value.toLowerCase()!==hex.toLowerCase())el.value=hex;
+    // image-node labels sit on the canvas, so re-tint them for the new background
+    if(typeof nodes!=="undefined")nodes.forEach(n=>{if(n.shape==="image"&&n.textEl)drawShape(n);});
   }
 
   // ---------- curve toggle ----------

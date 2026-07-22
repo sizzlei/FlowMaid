@@ -559,6 +559,19 @@
     for(let i=0;i<pts.length-1;i++){const d=segDist2(x,y,pts[i],pts[i+1]);if(d<bd){bd=d;best=i;}}
     wps.splice(best,0,{x,y});return best;
   }
+  // in right-angle mode, magnetically align a dragged pinpoint (index i) to its neighbour
+  // points (adjacent pinpoints, or the end nodes) so horizontal/vertical segments snap clean.
+  function orthoSnap(e,i,x,y){
+    if(!e.ortho)return{x,y};
+    const wps=e.waypoints||[],a=nodes.find(n=>n.id===e.from),b=nodes.find(n=>n.id===e.to);
+    const prev=i>0?wps[i-1]:(a?{x:a.x,y:a.y}:null);
+    const next=i<wps.length-1?wps[i+1]:(b?{x:b.x,y:b.y}:null);
+    const TH=16;let nx=x,ny=y,bx=TH,by=TH;
+    for(const p of [prev,next]){if(!p)continue;
+      if(Math.abs(x-p.x)<bx){bx=Math.abs(x-p.x);nx=p.x;}
+      if(Math.abs(y-p.y)<by){by=Math.abs(y-p.y);ny=p.y;}}
+    return{x:nx,y:ny};
+  }
   function drawEdge(e){
     const a=nodes.find(n=>n.id===e.from),b=nodes.find(n=>n.id===e.to);if(!a||!b)return;
     const wps=e.waypoints||(e.waypoints=[]);
@@ -651,6 +664,7 @@
         if(!created){if(Math.abs(p.x-sp.x)+Math.abs(p.y-sp.y)<3)return;
           idx=insertWaypointAt(e,sp.x,sp.y);if(idx<0)return;created=true;selectEdge(e);}
         let x=p.x,y=p.y;if(snapOn){x=snapVal(x);y=snapVal(y);}
+        ({x,y}=orthoSnap(e,idx,x,y));
         e.waypoints[idx]={x,y};moved=true;drawEdge(e);};
       const onUp=()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);
         if(created&&moved){e._justDragged=true;sync();}};
@@ -674,6 +688,7 @@
       if(ev.button!==0||spaceDown)return;ev.stopPropagation();let moved=false;
       const onMove=mv=>{const p=cursorPt(mv);const i=e.wpEls.indexOf(c);if(i<0)return;
         let x=p.x,y=p.y;if(snapOn){x=snapVal(x);y=snapVal(y);}
+        ({x,y}=orthoSnap(e,i,x,y));
         e.waypoints[i]={x,y};moved=true;drawEdge(e);};
       const onUp=()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);if(moved)sync();};
       window.addEventListener("mousemove",onMove);window.addEventListener("mouseup",onUp);

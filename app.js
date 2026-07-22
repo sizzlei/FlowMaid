@@ -572,6 +572,17 @@
       if(Math.abs(y-p.y)<by){by=Math.abs(y-p.y);ny=p.y;}}
     return{x:nx,y:ny};
   }
+  // Shift-constrain: snap the vector (ax,ay)->(x,y) to the nearest 45° (so 0/45/90…),
+  // giving clean horizontal/vertical/diagonal lines while dragging.
+  function angleSnap(ax,ay,x,y){
+    const dx=x-ax,dy=y-ay,len=Math.hypot(dx,dy);
+    if(len<1)return{x,y};
+    const step=Math.PI/4,ang=Math.round(Math.atan2(dy,dx)/step)*step;
+    return{x:ax+Math.cos(ang)*len,y:ay+Math.sin(ang)*len};
+  }
+  // reference point for a pinpoint's Shift-constraint = its previous route point
+  function wpPrev(e,i){const wps=e.waypoints||[];
+    if(i>0)return wps[i-1];const a=nodes.find(n=>n.id===e.from);return a?{x:a.x,y:a.y}:null;}
   // merge overlapping pinpoints: drop a pinpoint onto a neighbour (or into an end node)
   // and the redundant point is removed. Returns true if anything changed.
   function dedupeWaypoints(e){
@@ -676,8 +687,9 @@
       const onMove=mv=>{const p=cursorPt(mv);
         if(!created){if(Math.abs(p.x-sp.x)+Math.abs(p.y-sp.y)<3)return;
           idx=insertWaypointAt(e,sp.x,sp.y);if(idx<0)return;created=true;selectEdge(e);}
-        let x=p.x,y=p.y;if(snapOn){x=snapVal(x);y=snapVal(y);}
-        ({x,y}=orthoSnap(e,idx,x,y));
+        let x=p.x,y=p.y;
+        if(mv.shiftKey){const r=wpPrev(e,idx);if(r)({x,y}=angleSnap(r.x,r.y,x,y));}
+        else{if(snapOn){x=snapVal(x);y=snapVal(y);}({x,y}=orthoSnap(e,idx,x,y));}
         e.waypoints[idx]={x,y};moved=true;drawEdge(e);};
       const onUp=()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);
         if(created&&moved){if(dedupeWaypoints(e))drawEdge(e);e._justDragged=true;sync();}};
@@ -700,8 +712,9 @@
     c.addEventListener("mousedown",ev=>{
       if(ev.button!==0||spaceDown)return;ev.stopPropagation();let moved=false;
       const onMove=mv=>{const p=cursorPt(mv);const i=e.wpEls.indexOf(c);if(i<0)return;
-        let x=p.x,y=p.y;if(snapOn){x=snapVal(x);y=snapVal(y);}
-        ({x,y}=orthoSnap(e,i,x,y));
+        let x=p.x,y=p.y;
+        if(mv.shiftKey){const r=wpPrev(e,i);if(r)({x,y}=angleSnap(r.x,r.y,x,y));}
+        else{if(snapOn){x=snapVal(x);y=snapVal(y);}({x,y}=orthoSnap(e,i,x,y));}
         e.waypoints[i]={x,y};moved=true;drawEdge(e);};
       const onUp=()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);
         if(moved){if(dedupeWaypoints(e))drawEdge(e);sync();}};
@@ -759,7 +772,8 @@
     n.textEl.addEventListener("mousedown",ev=>{n.shapeEl.dispatchEvent(new MouseEvent("mousedown",ev));});
     window.addEventListener("mousemove",ev=>{
       if(!dragging)return;const p=cursorPt(ev);
-      const dx=p.x-start.x,dy=p.y-start.y;
+      let dx=p.x-start.x,dy=p.y-start.y;
+      if(ev.shiftKey){if(Math.abs(dx)>=Math.abs(dy))dy=0;else dx=0;} // Shift = lock to H or V
       if(Math.abs(dx)+Math.abs(dy)>1)moved=true;
       group.forEach(g=>{g.n.x=g.x0+dx;g.n.y=g.y0+dy;
         if(snapOn){g.n.x=snapVal(g.n.x);g.n.y=snapVal(g.n.y);}position(g.n);});

@@ -103,7 +103,10 @@
   .edge path.line{fill:none;stroke:#9c8fce;stroke-width:2}
   .edge.sel path.line{stroke:var(--accent2)!important;stroke-width:3!important}
   .edge text{fill:var(--text);font-size:12px;font-weight:600;text-anchor:middle}
-  .edge .hit{stroke:transparent;stroke-width:16;fill:none;cursor:pointer}
+  .edge .hit{stroke:transparent;stroke-width:16;fill:none;cursor:crosshair}
+  .wp-handle{fill:var(--accent2);stroke:#fff;stroke-width:1.5;opacity:0;cursor:move;transition:opacity .1s;pointer-events:none}
+  .edge.sel .wp-handle{opacity:.95;pointer-events:all}
+  .edge.sel:hover .wp-handle,.edge:hover .wp-handle{opacity:.95;pointer-events:all}
   #tempEdge{fill:none;stroke:var(--accent2);stroke-width:2;stroke-dasharray:5 4;pointer-events:none}
   .marquee{fill:rgba(139,92,246,.14);stroke:var(--accent);stroke-width:1;
     stroke-dasharray:4 3;pointer-events:none}

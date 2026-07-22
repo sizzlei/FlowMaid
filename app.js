@@ -305,6 +305,9 @@
           {label:"○ 원",action:()=>applyEdgeStyle("head","circle")},
           {label:"✕ X",action:()=>applyEdgeStyle("head","cross")},
           {label:"↔ 양방향",action:()=>applyEdgeStyle("head","bi")}]},
+        {label:(e&&e.ortho)?"↳ 직각 연결 끄기":"↳ 직각 연결 켜기",action:()=>{if(e){e.ortho=!e.ortho;drawEdge(e);sync();toast(e.ortho?"직각 연결":"자유 연결");}}},
+        {label:"핀포인트 추가",action:()=>{if(e){const p=clientPt(cx,cy);insertWaypointAt(e,p.x,p.y);selectEdge(e);drawEdge(e);sync();}}},
+        {label:"핀포인트 모두 지우기",action:()=>{if(e){e.waypoints=[];drawEdge(e);sync();}}},
         {label:"애니메이션 순서…",action:()=>{if(e)askText("애니메이션 순서 (숫자, 작을수록 먼저 · 같은 숫자는 동시)",String(e.order||1),
           v=>{const num=parseInt(v,10);e.order=isNaN(num)?1:num;edges.forEach(drawEdge);sync();});}},
         {label:"태그 지정…",action:()=>{if(e)askText("태그 (쉼표로 구분)",(e.tags||[]).join(", "),
@@ -523,13 +526,58 @@
   // all edges connecting the same unordered node pair, in a stable order (by id)
   function edgeSiblings(e){return edges.filter(x=>(x.from===e.from&&x.to===e.to)||(x.from===e.to&&x.to===e.from))
     .sort((p,q)=>p.id-q.id);}
+  // which axis an anchor point exits on: 'h' for left/right sides, 'v' for top/bottom
+  function anchorAxis(n,p){return Math.abs(p.x-n.x)>=Math.abs(p.y-n.y)?"h":"v";}
+  // build an orthogonal (right-angle) path through ordered points, inserting one corner per bend.
+  // startAxis = the axis the line should travel on first ('h' or 'v'); corners alternate afterwards.
+  function orthoPath(pts,startAxis){
+    let d="M "+pts[0].x+" "+pts[0].y, axis=startAxis;
+    for(let i=1;i<pts.length;i++){
+      const a=pts[i-1],b=pts[i];
+      if(a.x===b.x&&a.y===b.y)continue;
+      if(a.x===b.x){d+=" L "+b.x+" "+b.y;axis="v";}
+      else if(a.y===b.y){d+=" L "+b.x+" "+b.y;axis="h";}
+      else if(axis==="h"){d+=" L "+b.x+" "+a.y+" L "+b.x+" "+b.y;axis="v";}
+      else{d+=" L "+a.x+" "+b.y+" L "+b.x+" "+b.y;axis="h";}
+    }
+    return d;
+  }
+  // squared distance from point (px,py) to segment a-b
+  function segDist2(px,py,a,b){
+    const dx=b.x-a.x,dy=b.y-a.y,l2=dx*dx+dy*dy;
+    let t=l2?((px-a.x)*dx+(py-a.y)*dy)/l2:0;t=Math.max(0,Math.min(1,t));
+    const cx=a.x+t*dx,cy=a.y+t*dy;return (px-cx)*(px-cx)+(py-cy)*(py-cy);
+  }
+  // insert a new waypoint at (x,y) into the segment of edge e nearest that point; returns its index
+  function insertWaypointAt(e,x,y){
+    const a=nodes.find(n=>n.id===e.from),b=nodes.find(n=>n.id===e.to);if(!a||!b)return -1;
+    const wps=e.waypoints||(e.waypoints=[]);
+    const t1=wps.length?wps[0]:{x:b.x,y:b.y},t2=wps.length?wps[wps.length-1]:{x:a.x,y:a.y};
+    const p1=anchorPoint(a,t1.x,t1.y),p2=anchorPoint(b,t2.x,t2.y);
+    const pts=[p1,...wps,p2];
+    let best=0,bd=Infinity;
+    for(let i=0;i<pts.length-1;i++){const d=segDist2(x,y,pts[i],pts[i+1]);if(d<bd){bd=d;best=i;}}
+    wps.splice(best,0,{x,y});return best;
+  }
   function drawEdge(e){
     const a=nodes.find(n=>n.id===e.from),b=nodes.find(n=>n.id===e.to);if(!a||!b)return;
+    const wps=e.waypoints||(e.waypoints=[]);
+    let mx,my,d;
+    if(wps.length||e.ortho){
+      // manual pinpoints and/or right-angle routing take precedence over auto-bow/curve.
+      // anchors aim at the nearest neighbouring point along the route.
+      const t1=wps.length?wps[0]:{x:b.x,y:b.y},t2=wps.length?wps[wps.length-1]:{x:a.x,y:a.y};
+      const p1=anchorPoint(a,t1.x,t1.y),p2=anchorPoint(b,t2.x,t2.y);
+      const pts=[p1,...wps,p2];
+      if(e.ortho){d=orthoPath(pts,anchorAxis(a,p1));}
+      else{d="M "+pts.map((p,i)=>(i?"L ":"")+p.x+" "+p.y).join(" ");}
+      mx=(p1.x+p2.x)/2;my=(p1.y+p2.y)/2; // fallback; refined from the path below
+    }else{
     const p1=anchorPoint(a,b.x,b.y),p2=anchorPoint(b,a.x,a.y);
     // auto-separate parallel/bidirectional edges: bow siblings apart so lines+labels don't overlap
     const sibs=edgeSiblings(e),tot=sibs.length,idx=sibs.indexOf(e);
     const bow=tot>1?(idx-(tot-1)/2)*26:0;
-    let mx=(p1.x+p2.x)/2,my=(p1.y+p2.y)/2,d;
+    mx=(p1.x+p2.x)/2;my=(p1.y+p2.y)/2;
     if(bow!==0){
       // perpendicular measured on a canonical axis (low id → high id) so opposite edges split cleanly
       const lo=Math.min(e.from,e.to),hi=Math.max(e.from,e.to);
@@ -548,9 +596,13 @@
     }else{
       d=`M ${p1.x} ${p1.y} L ${p2.x} ${p2.y}`;
     }
+    }
     e.pathEl.setAttribute("d",d);e.hitEl.setAttribute("d",d);
     styleEdge(e);
     if(e.pulseEl)e.pulseEl.setAttribute("d",d);
+    // for multi-segment routes, place the label at the true middle of the drawn path
+    if(wps.length||e.ortho){try{const L=e.pathEl.getTotalLength();const pm=e.pathEl.getPointAtLength(L/2);mx=pm.x;my=pm.y;}catch(_){}}
+    renderWaypointHandles(e);
     if(e.label){
       const cy=my-8, h=20, tw=measure(e.label)*0.86, bw=tw+18;   // padded, rounded label chip
       e.textEl.setAttribute("x",mx);e.textEl.setAttribute("y",cy);
@@ -583,13 +635,51 @@
     const text=document.createElementNS(SVGNS,"text");
     const badge=document.createElementNS(SVGNS,"circle");badge.setAttribute("class","order-badge");
     const badgeTx=document.createElementNS(SVGNS,"text");badgeTx.setAttribute("class","order-badge-t");
-    g.appendChild(path);g.appendChild(bg);g.appendChild(text);g.appendChild(badge);g.appendChild(badgeTx);g.appendChild(hit);
+    const wpLayer=document.createElementNS(SVGNS,"g");wpLayer.setAttribute("class","wp-layer");
+    g.appendChild(path);g.appendChild(bg);g.appendChild(text);g.appendChild(badge);g.appendChild(badgeTx);g.appendChild(hit);g.appendChild(wpLayer);
     gEdges.appendChild(g);
     e.el=g;e.pathEl=path;e.hitEl=hit;e.textEl=text;e.bgEl=bg;e.badgeEl=badge;e.badgeTx=badgeTx;
-    hit.addEventListener("click",ev=>{ev.stopPropagation();selectEdge(e);});
+    e.wpLayer=wpLayer;e.wpEls=[];
+    hit.addEventListener("click",ev=>{ev.stopPropagation();if(e._justDragged){e._justDragged=false;return;}selectEdge(e);});
     hit.addEventListener("dblclick",ev=>{ev.stopPropagation();
       openInline(ev.clientX,ev.clientY,e.label,v=>{e.label=v.trim();drawEdge(e);sync();});});
+    // drag anywhere on the line to create a pinpoint and bend the edge
+    hit.addEventListener("mousedown",ev=>{
+      if(ev.button!==0||spaceDown)return;ev.stopPropagation();
+      const sp=cursorPt(ev);let created=false,idx=-1,moved=false;
+      const onMove=mv=>{const p=cursorPt(mv);
+        if(!created){if(Math.abs(p.x-sp.x)+Math.abs(p.y-sp.y)<3)return;
+          idx=insertWaypointAt(e,sp.x,sp.y);if(idx<0)return;created=true;selectEdge(e);}
+        let x=p.x,y=p.y;if(snapOn){x=snapVal(x);y=snapVal(y);}
+        e.waypoints[idx]={x,y};moved=true;drawEdge(e);};
+      const onUp=()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);
+        if(created&&moved){e._justDragged=true;sync();}};
+      window.addEventListener("mousemove",onMove);window.addEventListener("mouseup",onUp);
+    });
     drawEdge(e);
+  }
+  // sync the draggable pinpoint handles to e.waypoints (shown only while the edge is selected)
+  function renderWaypointHandles(e){
+    if(!e.wpLayer)return;const wps=e.waypoints||[];
+    while(e.wpEls.length>wps.length){e.wpEls.pop().remove();}
+    while(e.wpEls.length<wps.length){
+      const c=document.createElementNS(SVGNS,"circle");c.setAttribute("class","wp-handle");c.setAttribute("r",6);
+      e.wpLayer.appendChild(c);e.wpEls.push(c);wireWaypoint(e,c);
+    }
+    wps.forEach((w,i)=>{e.wpEls[i].setAttribute("cx",w.x);e.wpEls[i].setAttribute("cy",w.y);});
+  }
+  // drag a pinpoint to reshape the edge; double-click a pinpoint to remove it
+  function wireWaypoint(e,c){
+    c.addEventListener("mousedown",ev=>{
+      if(ev.button!==0||spaceDown)return;ev.stopPropagation();let moved=false;
+      const onMove=mv=>{const p=cursorPt(mv);const i=e.wpEls.indexOf(c);if(i<0)return;
+        let x=p.x,y=p.y;if(snapOn){x=snapVal(x);y=snapVal(y);}
+        e.waypoints[i]={x,y};moved=true;drawEdge(e);};
+      const onUp=()=>{window.removeEventListener("mousemove",onMove);window.removeEventListener("mouseup",onUp);if(moved)sync();};
+      window.addEventListener("mousemove",onMove);window.addEventListener("mouseup",onUp);
+    });
+    c.addEventListener("dblclick",ev=>{ev.stopPropagation();const i=e.wpEls.indexOf(c);
+      if(i>=0){e.waypoints.splice(i,1);drawEdge(e);sync();}});
   }
 
   // ---------- selection (multi-node + single edge) ----------
@@ -616,7 +706,8 @@
   function rgbToHex(c){return c&&c.startsWith("#")?c:"#2f2748";}
 
   // ---------- pointer helpers ----------
-  function cursorPt(ev){const pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;
+  function cursorPt(ev){return clientPt(ev.clientX,ev.clientY);}
+  function clientPt(cx,cy){const pt=svg.createSVGPoint();pt.x=cx;pt.y=cy;
     return pt.matrixTransform(svg.getScreenCTM().inverse());}
   function nodeUnder(ev){
     const el=document.elementFromPoint(ev.clientX,ev.clientY);
@@ -702,7 +793,7 @@
   }
   function addEdge(from,to,label,style){
     if(edges.some(e=>e.from===from&&e.to===to)){toast("이미 연결됨");return;}
-    const e={id:++eid,from,to,label:label||"",order:1,tags:[],
+    const e={id:++eid,from,to,label:label||"",order:1,tags:[],waypoints:[],ortho:false,
       line:(style&&style.line)||edgeDefaults.line,head:(style&&style.head)||edgeDefaults.head};
     edges.push(e);renderEdge(e);
     edgeSiblings(e).forEach(drawEdge);              // re-bow existing sibling so both separate
@@ -1256,7 +1347,8 @@
     nodes:nodes.map(n=>{const o={id:n.id,label:n.label,shape:n.shape,x:Math.round(n.x),y:Math.round(n.y),
       fill:n.fill,stroke:n.stroke,bstyle:n.bstyle};if(n.shape==="image")o.img=n.img;return o;}),
     edges:edges.map(e=>({id:e.id,from:e.from,to:e.to,label:e.label,line:e.line,head:e.head,
-      order:e.order||1,tags:(e.tags||[]).slice()})),
+      order:e.order||1,tags:(e.tags||[]).slice(),ortho:!!e.ortho,
+      waypoints:(e.waypoints||[]).map(w=>({x:Math.round(w.x),y:Math.round(w.y)}))})),
     groups:subgraphs.map(sg=>({id:sg.id,title:sg.title,nodes:[...sg.nodes],color:sg.color})),
     containers:containers.map(c=>({id:c.id,label:c.label,x:Math.round(c.x),y:Math.round(c.y),
       w:Math.round(c.w),h:Math.round(c.h),color:c.color}))};}
@@ -1271,7 +1363,8 @@
       x:d.x,y:d.y,w:NODE_W,h:NODE_H,handles:[]};nodes.push(n);renderNode(n);});
     (s.edges||[]).forEach(d=>{const e={id:d.id,from:d.from,to:d.to,label:d.label||"",
       line:d.line||"solid",head:d.head||"arrow",
-      order:d.order||1,tags:d.tags||[]};edges.push(e);renderEdge(e);});
+      order:d.order||1,tags:d.tags||[],ortho:!!d.ortho,
+      waypoints:Array.isArray(d.waypoints)?d.waypoints.map(w=>({x:w.x,y:w.y})):[]};edges.push(e);renderEdge(e);});
     (s.groups||[]).forEach(d=>rebuildGroup(d));
     (s.containers||[]).forEach(d=>{const c={id:d.id,label:d.label||"Group",color:d.color||"#5A6B86",
       x:d.x,y:d.y,w:d.w||260,h:d.h||180};containers.push(c);renderContainer(c);});
